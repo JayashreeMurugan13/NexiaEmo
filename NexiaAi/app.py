@@ -103,16 +103,41 @@ if 'dark_mode' not in st.session_state:
     st.session_state.dark_mode = False
 
 # Load persistent user database
-@st.cache_data
-def load_users_db():
-    return {}
+import os
+import pickle
 
-@st.cache_data
+def load_users_db():
+    db_file = "users_db.pkl"
+    if os.path.exists(db_file):
+        try:
+            with open(db_file, 'rb') as f:
+                return pickle.load(f)
+        except:
+            pass
+    # Initialize with demo user
+    return {
+        "demo@nexia.ai": {
+            "password": "demo123",
+            "chats": [],
+            "created_at": datetime.now().isoformat()
+        }
+    }
+
 def save_users_db(users_db):
+    db_file = "users_db.pkl"
+    try:
+        with open(db_file, 'wb') as f:
+            pickle.dump(users_db, f)
+    except:
+        pass
     return users_db
 
 if 'users_db' not in st.session_state:
     st.session_state.users_db = load_users_db()
+if 'current_email' not in st.session_state:
+    st.session_state.current_email = ""
+if 'suggested_tab' not in st.session_state:
+    st.session_state.suggested_tab = 0  # 0 for Sign In, 1 for Sign Up
 
 # Groq API functions
 def detect_tanglish(text):
@@ -259,6 +284,17 @@ def generate_chat_title_from_conversation(messages):
     except:
         return "Chat with Nexia"
 
+def check_email_exists(email):
+    """Check if email exists and update suggested tab"""
+    if email and "@" in email:
+        if email in st.session_state.users_db or email == "demo@nexia.ai":
+            st.session_state.suggested_tab = 0  # Sign In
+            return True, "Email found! Please sign in."
+        else:
+            st.session_state.suggested_tab = 1  # Sign Up
+            return False, "New email! Please sign up."
+    return None, ""
+
 # Authentication functions
 def authenticate_user(email, password):
     # Check demo credentials
@@ -282,8 +318,7 @@ def register_user(email, password):
             "chats": [],
             "created_at": datetime.now().isoformat()
         }
-        # Persist the database
-        save_users_db.clear()
+        # Save to file
         save_users_db(st.session_state.users_db)
         return True, "Account created successfully!"
     return False, "Invalid email or password too short"
@@ -304,8 +339,7 @@ def save_user_chats(email, chats):
     
     if email in st.session_state.users_db:
         st.session_state.users_db[email]["chats"] = chats
-        # Persist the database
-        save_users_db.clear()
+        # Save to file
         save_users_db(st.session_state.users_db)
 
 def create_new_chat():
@@ -336,11 +370,31 @@ def main():
         col1, col2, col3 = st.columns([1, 2, 1])
         
         with col2:
-            tab1, tab2 = st.tabs(["Sign In", "Sign Up"])
+            # Email detection input
+            email_check = st.text_input("Enter your email to get started", 
+                                      placeholder="Enter your email", 
+                                      key="email_detector")
+            
+            if email_check and email_check != st.session_state.current_email:
+                st.session_state.current_email = email_check
+                exists, message = check_email_exists(email_check)
+                if message:
+                    if exists:
+                        st.success(message)
+                    else:
+                        st.info(message)
+            
+            # Dynamic tabs based on email detection
+            if st.session_state.suggested_tab == 0:
+                tab1, tab2 = st.tabs(["✅ Sign In (Recommended)", "Sign Up"])
+            else:
+                tab1, tab2 = st.tabs(["Sign In", "✅ Sign Up (Recommended)"])
             
             with tab1:
                 with st.form("signin_form"):
-                    email = st.text_input("Email", placeholder="Enter your email")
+                    email = st.text_input("Email", 
+                                         value=st.session_state.current_email if st.session_state.suggested_tab == 0 else "",
+                                         placeholder="Enter your email")
                     password = st.text_input("Password", type="password", placeholder="Enter your password")
                     submit = st.form_submit_button("Sign In", use_container_width=True)
                     
@@ -355,7 +409,9 @@ def main():
             
             with tab2:
                 with st.form("signup_form"):
-                    email = st.text_input("Email", placeholder="Enter your email", key="signup_email")
+                    email = st.text_input("Email", 
+                                         value=st.session_state.current_email if st.session_state.suggested_tab == 1 else "",
+                                         placeholder="Enter your email", key="signup_email")
                     password = st.text_input("Password", type="password", placeholder="Enter your password (min 6 chars)", key="signup_password")
                     submit = st.form_submit_button("Sign Up", use_container_width=True)
                     
