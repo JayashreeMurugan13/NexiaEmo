@@ -182,7 +182,7 @@ def send_message_to_groq(messages, user_message):
         }
         
         payload = {
-            "model": "llama-3.1-70b-versatile",
+            "model": "llama-3.3-70b-versatile",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 *messages,
@@ -228,7 +228,7 @@ def generate_chat_title_from_conversation(messages):
         }
         
         payload = {
-            "model": "llama-3.1-70b-versatile",
+            "model": "llama-3.3-70b-versatile",
             "messages": [
                 {
                     "role": "system", 
