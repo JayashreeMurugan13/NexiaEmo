@@ -182,7 +182,7 @@ def send_message_to_groq(messages, user_message):
         }
         
         payload = {
-            "model": "llama3-8b-8192",
+            "model": "llama-3.1-70b-versatile",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 *messages,
@@ -228,7 +228,7 @@ def generate_chat_title_from_conversation(messages):
         }
         
         payload = {
-            "model": "llama3-8b-8192",
+            "model": "llama-3.1-70b-versatile",
             "messages": [
                 {
                     "role": "system", 
@@ -273,6 +273,10 @@ def authenticate_user(email, password):
 
 def register_user(email, password):
     if email and len(password) >= 6:
+        # Check if email already exists
+        if email in st.session_state.users_db:
+            return False, "Email already exists! Please go to Sign In."
+        
         st.session_state.users_db[email] = {
             "password": password,
             "chats": [],
@@ -281,8 +285,8 @@ def register_user(email, password):
         # Persist the database
         save_users_db.clear()
         save_users_db(st.session_state.users_db)
-        return True
-    return False
+        return True, "Account created successfully!"
+    return False, "Invalid email or password too short"
 
 def load_user_chats(email):
     if email == "demo@nexia.ai":
@@ -356,13 +360,14 @@ def main():
                     submit = st.form_submit_button("Sign Up", use_container_width=True)
                     
                     if submit:
-                        if register_user(email, password):
+                        success, message = register_user(email, password)
+                        if success:
                             st.session_state.authenticated = True
                             st.session_state.user_email = email
                             st.session_state.chats = load_user_chats(email)
                             st.rerun()
                         else:
-                            st.error("Invalid email or password too short")
+                            st.error(message)
             
             st.info("**Demo credentials:**\nEmail: demo@nexia.ai\nPassword: demo123")
     
