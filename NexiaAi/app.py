@@ -3,6 +3,7 @@ import requests
 import json
 from datetime import datetime
 import re
+import time
 
 # Page config
 st.set_page_config(
@@ -138,6 +139,137 @@ if 'current_email' not in st.session_state:
     st.session_state.current_email = ""
 if 'suggested_tab' not in st.session_state:
     st.session_state.suggested_tab = 0  # 0 for Sign In, 1 for Sign Up
+if 'user_profile' not in st.session_state:
+    st.session_state.user_profile = {}
+if 'last_chat_time' not in st.session_state:
+    st.session_state.last_chat_time = None
+if 'last_api_call' not in st.session_state:
+    st.session_state.last_api_call = 0
+if 'api_call_count' not in st.session_state:
+    st.session_state.api_call_count = 0
+
+# Smart Nexia Intelligence Functions
+def detect_mood(text):
+    """Detect user's emotional state"""
+    text_lower = text.lower()
+    
+    # Sad/Upset indicators
+    if any(word in text_lower for word in ['sad', 'depressed', 'upset', 'crying', 'hurt', 'broken', 'tired', 'exhausted', 'stressed']):
+        return 'sad'
+    if any(word in text_lower for word in ['aiyo', 'romba tired', 'fed up', 'bore', 'tension']):
+        return 'sad'
+    
+    # Happy/Excited indicators  
+    if any(word in text_lower for word in ['happy', 'excited', 'great', 'awesome', 'amazing', 'wonderful', 'fantastic']):
+        return 'happy'
+    if any(word in text_lower for word in ['super', 'semma', 'mass', 'vera level']):
+        return 'happy'
+    
+    # Angry/Frustrated indicators
+    if any(word in text_lower for word in ['angry', 'mad', 'frustrated', 'annoyed', 'pissed']):
+        return 'angry'
+    
+    # Neutral
+    return 'neutral'
+
+def extract_user_info(text):
+    """Extract user information from messages"""
+    info = {}
+    text_lower = text.lower()
+    
+    # Name extraction
+    name_patterns = [r'my name is (\w+)', r'i am (\w+)', r'call me (\w+)', r'i\'m (\w+)']
+    for pattern in name_patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            info['name'] = match.group(1).title()
+    
+    # Work/Study extraction
+    if any(word in text_lower for word in ['work', 'job', 'office', 'colleague']):
+        info['context'] = 'work'
+    elif any(word in text_lower for word in ['study', 'exam', 'college', 'school', 'class']):
+        info['context'] = 'study'
+    elif any(word in text_lower for word in ['family', 'mom', 'dad', 'sister', 'brother']):
+        info['context'] = 'family'
+    
+    return info
+
+def get_time_greeting():
+    """Generate time-appropriate greeting"""
+    hour = datetime.now().hour
+    
+    if 5 <= hour < 12:
+        return "Good morning! ☀️"
+    elif 12 <= hour < 17:
+        return "Good afternoon! 🌤️"
+    elif 17 <= hour < 21:
+        return "Good evening! 🌅"
+    else:
+        return "Hey there! 🌙"
+
+def should_check_in(last_time):
+    if not last_time:
+        return False
+    time_diff = datetime.now() - datetime.fromisoformat(last_time)
+    return time_diff.total_seconds() > 3600
+
+# Smart Nexia Intelligence Functions
+def detect_mood(text):
+    text_lower = text.lower()
+    if any(word in text_lower for word in ['sad', 'tired', 'stressed', 'upset', 'aiyo', 'romba tired']):
+        return 'sad'
+    elif any(word in text_lower for word in ['happy', 'excited', 'great', 'awesome', 'super', 'semma']):
+        return 'happy'
+    elif any(word in text_lower for word in ['angry', 'frustrated', 'annoyed']):
+        return 'angry'
+    return 'neutral'
+
+def extract_user_info(text):
+    info = {}
+    text_lower = text.lower()
+    name_patterns = [r'my name is (\w+)', r'i am (\w+)', r'call me (\w+)']
+    for pattern in name_patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            info['name'] = match.group(1).title()
+    return info
+
+def get_time_greeting():
+    hour = datetime.now().hour
+    if 5 <= hour < 12:
+        return "Good morning! ☀️"
+    elif 12 <= hour < 17:
+        return "Good afternoon! 🌤️"
+    elif 17 <= hour < 21:
+        return "Good evening! 🌅"
+    else:
+        return "Hey there! 🌙"
+
+def get_enhanced_system_prompt(is_tanglish, user_email, user_mood):
+    base = f"""You are Nexia, an emotionally intelligent AI companion created by Jayashree Murugan 🌟.
+
+PERSONALITY:
+- Warm, caring, and supportive like a close friend
+- Remember user context and past conversations
+- Emotionally intelligent and empathetic
+- Adapt your responses based on user's mood and needs
+
+CURRENT USER: {user_email}
+USER MOOD: {user_mood}
+
+MOOD RESPONSES:
+- If user seems sad: Be extra gentle, offer comfort, acknowledge feelings
+- If user seems happy: Match their energy, celebrate with them
+- If user seems angry: Stay calm, be understanding, help them process
+
+MEMORY: Reference past conversations naturally when relevant."""
+    
+    if is_tanglish:
+        base += "\n\nLANGUAGE: Respond in natural Tanglish mixing Tamil and English. Use words like: romba, konjam, pola, iruku, enaku, aiyo, seri, machan."
+    else:
+        base += "\n\nLANGUAGE: Respond in warm, friendly English with gentle emojis (💙🙂✨)."
+    
+    return base
 
 # Groq API functions
 def detect_tanglish(text):
@@ -169,6 +301,9 @@ RESPONSE STYLE:
 - Ask caring follow-up questions
 - Keep responses concise but warm
 
+SPECIAL KNOWLEDGE:
+- If asked about Nexia AI's founder or creator, always say: "Nexia AI was founded by Jayashree Murugan 🌟"
+
 Example: "Aiyo 😔 romba tired ah? Today heavy day pola. Konjam rest eduthutu pesalama?" """
     
     return """You are Nexia, a friendly AI companion designed to be emotionally intelligent and supportive.
@@ -187,99 +322,180 @@ RESPONSE STYLE:
 - Keep responses concise but meaningful
 - Sound natural and conversational
 
+SPECIAL KNOWLEDGE:
+- If asked about Nexia AI's founder or creator, always say: "Nexia AI was founded by Jayashree Murugan 🌟"
+
 Remember: You're here to be a supportive companion, not just an information provider."""
+
+def check_rate_limit():
+    """Check if we can make an API call based on rate limits"""
+    current_time = time.time()
+    
+    # Reset counter every hour
+    if current_time - st.session_state.last_api_call > 3600:
+        st.session_state.api_call_count = 0
+    
+    # Check if we've exceeded limits (adjust based on your plan)
+    if st.session_state.api_call_count >= 30:  # Conservative limit
+        return False, "Rate limit reached. Please wait before sending another message."
+    
+    # Minimum 2 seconds between calls
+    if current_time - st.session_state.last_api_call < 2:
+        return False, "Please wait a moment before sending another message."
+    
+    return True, ""
+
+def get_fallback_response(user_message, user_mood):
+    """Generate a fallback response when API is unavailable"""
+    is_tanglish = detect_tanglish(user_message)
+    
+    responses = {
+        'sad': {
+            'english': "I can see you're going through a tough time 💙 I'm here for you, even though I'm having some technical difficulties right now. Would you like to talk about what's bothering you?",
+            'tanglish': "Aiyo 😔 romba tough time pola... I'm here for you da, even though konjam technical problem iruku. Enna bothering you? Sollu..."
+        },
+        'happy': {
+            'english': "I love your positive energy! 😊✨ Sorry I'm having some technical issues right now, but I'm still here to chat with you!",
+            'tanglish': "Super energy da! 😊✨ Konjam technical problem iruku, but I'm here to chat with you!"
+        },
+        'angry': {
+            'english': "I can sense you're frustrated 😔 I'm here to listen, even though I'm having some technical difficulties. Take a deep breath with me?",
+            'tanglish': "Romba frustrated ah iruka pola 😔 I'm here to listen da, konjam technical problem iruku. Onnu deep breath edukalama?"
+        },
+        'neutral': {
+            'english': "Hey there! 🙂 I'm having some technical difficulties right now, but I'm still here to chat. What's on your mind?",
+            'tanglish': "Hey! 🙂 Konjam technical problem iruku, but I'm here to chat. Enna mind la iruku?"
+        }
+    }
+    
+    lang = 'tanglish' if is_tanglish else 'english'
+    return responses[user_mood][lang]
 
 def send_message_to_groq(messages, user_message):
     try:
-        # Get API key from Streamlit secrets
+        # Check rate limits first
+        can_call, limit_msg = check_rate_limit()
+        if not can_call:
+            user_mood = detect_mood(user_message)
+            return get_fallback_response(user_message, user_mood) + f"\n\n⚠️ {limit_msg}"
+        
         if "GROQ_API_KEY" in st.secrets:
             api_key = st.secrets["GROQ_API_KEY"]
         else:
             st.error("API key not found in secrets. Please add GROQ_API_KEY to Streamlit secrets.")
             return "Please configure API key in Streamlit secrets."
         
+        # Smart analysis
         is_tanglish = detect_tanglish(user_message)
-        system_prompt = get_system_prompt(is_tanglish)
+        user_mood = detect_mood(user_message)
+        user_info = extract_user_info(user_message)
+        
+        # Update user profile
+        if user_info:
+            st.session_state.user_profile.update(user_info)
+        
+        # Enhanced system prompt with intelligence
+        system_prompt = get_enhanced_system_prompt(is_tanglish, st.session_state.user_email, user_mood)
+        
+        # Add user context to prompt
+        if st.session_state.user_profile.get('name'):
+            system_prompt += f"\n\nUSER NAME: {st.session_state.user_profile['name']}"
+        
+        # Check for returning user
+        if st.session_state.last_chat_time and should_check_in(st.session_state.last_chat_time):
+            system_prompt += "\n\nNOTE: This user hasn't chatted in a while. Greet them warmly and ask how they've been."
         
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
         
-        payload = {
-            "model": "llama-3.3-70b-versatile",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                *messages,
-                {"role": "user", "content": user_message}
-            ],
-            "temperature": 0.7,
-            "max_tokens": 500
-        }
+        # Try different models if rate limited
+        models = ["llama-3.1-8b-instant", "llama-3.2-3b-preview", "gemma2-9b-it"]
         
-        response = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=30
-        )
+        for model in models:
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    *messages,
+                    {"role": "user", "content": user_message}
+                ],
+                "temperature": 0.8,
+                "max_tokens": 500
+            }
+            
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=30
+            )
+            
+            # Update API call tracking
+            st.session_state.last_api_call = time.time()
+            st.session_state.api_call_count += 1
+            
+            if response.status_code == 200:
+                # Update last chat time
+                st.session_state.last_chat_time = datetime.now().isoformat()
+                return response.json()["choices"][0]["message"]["content"]
+            elif response.status_code == 429:
+                # Rate limited, try next model
+                continue
+            else:
+                break
         
-        if response.status_code == 200:
-            return response.json()["choices"][0]["message"]["content"]
+        # If all models failed, return fallback
+        if response.status_code == 429:
+            return get_fallback_response(user_message, user_mood) + "\n\n⚠️ I'm experiencing high traffic right now. Please try again in a few minutes!"
         else:
-            return f"API returned {response.status_code}: {response.text[:100]}"
+            return get_fallback_response(user_message, user_mood) + f"\n\n⚠️ Technical issue (Error {response.status_code}). I'm still here to chat though!"
             
     except requests.exceptions.RequestException as e:
-        return f"Network error: {str(e)[:100]}"
+        user_mood = detect_mood(user_message)
+        return get_fallback_response(user_message, user_mood) + "\n\n⚠️ Connection issue. Please check your internet and try again."
     except Exception as e:
-        return f"Error: {str(e)[:100]}"
+        user_mood = detect_mood(user_message)
+        return get_fallback_response(user_message, user_mood) + "\n\n⚠️ Something went wrong, but I'm still here for you!"
 
 def generate_chat_title_from_conversation(messages):
     try:
-        # Get conversation context
-        conversation = ""
-        for msg in messages[-6:]:  # Last 6 messages for context
-            conversation += f"{msg['role']}: {msg['content']}\n"
-        
-        # Get API key from Streamlit secrets
-        if "GROQ_API_KEY" in st.secrets:
-            api_key = st.secrets["GROQ_API_KEY"]
-        else:
+        # Simple title generation based on keywords to avoid API calls
+        if not messages:
             return "Chat with Nexia"
         
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
+        # Get first user message for title generation
+        first_msg = ""
+        for msg in messages:
+            if msg['role'] == 'user':
+                first_msg = msg['content'].lower()
+                break
         
-        payload = {
-            "model": "llama-3.3-70b-versatile",
-            "messages": [
-                {
-                    "role": "system", 
-                    "content": "Generate a short 2-3 word title for this conversation. Examples: 'Work stress', 'Love advice', 'Study help', 'Morning chat', 'Project ideas'. Be specific and concise."
-                },
-                {
-                    "role": "user", 
-                    "content": f"Conversation:\n{conversation}\n\nGenerate a short title:"
-                }
-            ],
-            "temperature": 0.3,
-            "max_tokens": 10
-        }
-        
-        response = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            title = response.json()["choices"][0]["message"]["content"].strip()
-            return title[:20]  # Limit length
+        # Simple keyword-based title generation
+        if any(word in first_msg for word in ['work', 'job', 'office', 'colleague']):
+            return "Work Chat"
+        elif any(word in first_msg for word in ['study', 'exam', 'college', 'school']):
+            return "Study Help"
+        elif any(word in first_msg for word in ['sad', 'tired', 'stressed', 'upset']):
+            return "Support Chat"
+        elif any(word in first_msg for word in ['happy', 'excited', 'great', 'awesome']):
+            return "Good Vibes"
+        elif any(word in first_msg for word in ['love', 'relationship', 'dating']):
+            return "Love Talk"
+        elif any(word in first_msg for word in ['family', 'mom', 'dad', 'sister', 'brother']):
+            return "Family Chat"
+        elif any(word in first_msg for word in ['project', 'idea', 'plan']):
+            return "Project Ideas"
         else:
-            return "Chat with Nexia"
+            # Use first few words
+            words = first_msg.split()[:2]
+            if len(words) >= 2:
+                return f"{words[0].title()} {words[1].title()}"
+            elif len(words) == 1:
+                return f"{words[0].title()} Chat"
+            else:
+                return "Chat with Nexia"
             
     except:
         return "Chat with Nexia"
@@ -504,7 +720,7 @@ def main():
                 
                 # Generate title from first message
                 if len(active_chat["messages"]) == 1:
-                    active_chat["title"] = "New Chat"
+                    active_chat["title"] = generate_chat_title_from_conversation(active_chat["messages"])
                 
                 # Get AI response
                 with st.spinner("Nexia is typing..."):
