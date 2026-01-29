@@ -85,25 +85,6 @@ def get_theme_css(dark_mode):
         </style>
         """
 
-# Initialize session state with persistent storage
-if 'authenticated' not in st.session_state:
-    # Check for saved session
-    saved_session = load_session()
-    if saved_session:
-        st.session_state.authenticated = True
-        st.session_state.user_email = saved_session['email']
-        st.session_state.chats = load_user_chats(saved_session['email'])
-    else:
-        st.session_state.authenticated = False
-if 'user_email' not in st.session_state:
-    st.session_state.user_email = ""
-if 'chats' not in st.session_state:
-    st.session_state.chats = []
-if 'active_chat_id' not in st.session_state:
-    st.session_state.active_chat_id = None
-if 'dark_mode' not in st.session_state:
-    st.session_state.dark_mode = False
-
 # Load persistent user database
 import os
 import pickle
@@ -116,7 +97,6 @@ def load_users_db():
                 return pickle.load(f)
         except:
             pass
-    # Initialize with demo user
     return {
         "demo@nexia.ai": {
             "password": "demo123",
@@ -135,40 +115,52 @@ def save_users_db(users_db):
     return users_db
 
 def load_session():
-    """Load saved session from file"""
-    session_file = "nexia_session.pkl"
-    if os.path.exists(session_file):
-        try:
+    try:
+        session_file = "nexia_session.pkl"
+        if os.path.exists(session_file):
             with open(session_file, 'rb') as f:
                 session_data = pickle.load(f)
-                # Check if session is still valid (24 hours)
                 if datetime.now() - datetime.fromisoformat(session_data['timestamp']) < timedelta(hours=24):
                     return session_data
-        except:
-            pass
+    except:
+        pass
     return None
 
 def save_session(email):
-    """Save current session to file"""
-    session_file = "nexia_session.pkl"
     try:
-        session_data = {
-            'email': email,
-            'timestamp': datetime.now().isoformat()
-        }
+        session_file = "nexia_session.pkl"
+        session_data = {'email': email, 'timestamp': datetime.now().isoformat()}
         with open(session_file, 'wb') as f:
             pickle.dump(session_data, f)
     except:
         pass
 
 def clear_session():
-    """Clear saved session"""
-    session_file = "nexia_session.pkl"
     try:
+        session_file = "nexia_session.pkl"
         if os.path.exists(session_file):
             os.remove(session_file)
     except:
         pass
+
+# Initialize session state
+if 'authenticated' not in st.session_state:
+    saved_session = load_session()
+    if saved_session:
+        st.session_state.authenticated = True
+        st.session_state.user_email = saved_session['email']
+    else:
+        st.session_state.authenticated = False
+if 'user_email' not in st.session_state:
+    st.session_state.user_email = ""
+if 'chats' not in st.session_state:
+    st.session_state.chats = []
+if 'active_chat_id' not in st.session_state:
+    st.session_state.active_chat_id = None
+if 'dark_mode' not in st.session_state:
+    st.session_state.dark_mode = False
+
+
 
 if 'users_db' not in st.session_state:
     st.session_state.users_db = load_users_db()
