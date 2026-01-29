@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 import time
 
@@ -33,21 +33,18 @@ def get_theme_css(dark_mode):
             }
             .chat-message {
                 padding: 1rem;
-                border-radius: 1rem;
+                border-radius: 0.5rem;
                 margin: 0.5rem 0;
-                max-width: 80%;
+                border: 1px solid #404040;
+                background: #262730;
             }
             .user-message {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                margin-left: auto;
-                border-bottom-right-radius: 0.25rem;
+                background: #343541;
+                border-left: 3px solid #667eea;
             }
             .assistant-message {
-                background: #262730;
-                color: #ffffff;
-                border-bottom-left-radius: 0.25rem;
-                border: 1px solid #404040;
+                background: #444654;
+                border-left: 3px solid #10a37f;
             }
             .stSidebar {
                 background-color: #1e1e1e;
@@ -72,28 +69,32 @@ def get_theme_css(dark_mode):
             }
             .chat-message {
                 padding: 1rem;
-                border-radius: 1rem;
+                border-radius: 0.5rem;
                 margin: 0.5rem 0;
-                max-width: 80%;
+                border: 1px solid #e0e0e0;
+                background: white;
             }
             .user-message {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                margin-left: auto;
-                border-bottom-right-radius: 0.25rem;
+                background: #f7f7f8;
+                border-left: 3px solid #667eea;
             }
             .assistant-message {
-                background: #f1f3f4;
-                color: #333;
-                border-bottom-left-radius: 0.25rem;
-                border: 1px solid #e0e0e0;
+                background: white;
+                border-left: 3px solid #10a37f;
             }
         </style>
         """
 
 # Initialize session state with persistent storage
 if 'authenticated' not in st.session_state:
-    st.session_state.authenticated = False
+    # Check for saved session
+    saved_session = load_session()
+    if saved_session:
+        st.session_state.authenticated = True
+        st.session_state.user_email = saved_session['email']
+        st.session_state.chats = load_user_chats(saved_session['email'])
+    else:
+        st.session_state.authenticated = False
 if 'user_email' not in st.session_state:
     st.session_state.user_email = ""
 if 'chats' not in st.session_state:
@@ -132,6 +133,42 @@ def save_users_db(users_db):
     except:
         pass
     return users_db
+
+def load_session():
+    """Load saved session from file"""
+    session_file = "nexia_session.pkl"
+    if os.path.exists(session_file):
+        try:
+            with open(session_file, 'rb') as f:
+                session_data = pickle.load(f)
+                # Check if session is still valid (24 hours)
+                if datetime.now() - datetime.fromisoformat(session_data['timestamp']) < timedelta(hours=24):
+                    return session_data
+        except:
+            pass
+    return None
+
+def save_session(email):
+    """Save current session to file"""
+    session_file = "nexia_session.pkl"
+    try:
+        session_data = {
+            'email': email,
+            'timestamp': datetime.now().isoformat()
+        }
+        with open(session_file, 'wb') as f:
+            pickle.dump(session_data, f)
+    except:
+        pass
+
+def clear_session():
+    """Clear saved session"""
+    session_file = "nexia_session.pkl"
+    try:
+        if os.path.exists(session_file):
+            os.remove(session_file)
+    except:
+        pass
 
 if 'users_db' not in st.session_state:
     st.session_state.users_db = load_users_db()
@@ -671,6 +708,7 @@ def main():
                             st.session_state.authenticated = True
                             st.session_state.user_email = email
                             st.session_state.chats = load_user_chats(email)
+                            save_session(email)  # Save session
                             st.rerun()
                         else:
                             st.error("Invalid email or password")
@@ -689,6 +727,7 @@ def main():
                             st.session_state.authenticated = True
                             st.session_state.user_email = email
                             st.session_state.chats = load_user_chats(email)
+                            save_session(email)  # Save session
                             st.rerun()
                         else:
                             st.error(message)
@@ -729,6 +768,7 @@ def main():
             # User info and logout
             st.markdown(f"**User:** {st.session_state.user_email}")
             if st.button("🚪 Logout"):
+                clear_session()  # Clear saved session
                 st.session_state.authenticated = False
                 st.session_state.user_email = ""
                 st.session_state.chats = []
@@ -743,61 +783,96 @@ def main():
         if st.session_state.active_chat_id:
             active_chat = next((chat for chat in st.session_state.chats if chat["id"] == st.session_state.active_chat_id), None)
         
-        # Display messages
+        # Display messages - ChatGPT style
         if active_chat and active_chat["messages"]:
-            for message in active_chat["messages"]:
+            for i, message in enumerate(active_chat["messages"]):
                 if message["role"] == "user":
-                    st.markdown(f'<div class="chat-message user-message">{message["content"]}</div>', unsafe_allow_html=True)
+                    with st.container():
+                        col1, col2, col3 = st.columns([1, 6, 1])
+                        with col2:
+                            st.markdown(f'<div class="chat-message user-message">**You**<br>{message["content"]}</div>', unsafe_allow_html=True)
                 else:
-                    st.markdown(f'<div class="chat-message assistant-message">🤖 {message["content"]}</div>', unsafe_allow_html=True)
+                    with st.container():
+                        col1, col2, col3 = st.columns([1, 6, 1])
+                        with col2:
+                            # Add copy button and regenerate option
+                            msg_col1, msg_col2 = st.columns([10, 1])
+                            with msg_col1:
+                                st.markdown(f'<div class="chat-message assistant-message">**Nexia**<br>{message["content"]}</div>', unsafe_allow_html=True)
+                            with msg_col2:
+                                if st.button("📋", key=f"copy_{i}", help="Copy message"):
+                                    st.write("Copied!")
+        else:
+            # Welcome message like ChatGPT
+            st.markdown("""
+            <div style="text-align: center; padding: 2rem; color: #666;">
+                <h2>👋 Hello! I'm Nexia</h2>
+                <p>Your friendly AI companion created by Jayashree Murugan</p>
+                <p>How can I help you today?</p>
+            </div>
+            """, unsafe_allow_html=True)
         
-        # Message input
-        with st.form("message_form", clear_on_submit=True):
-            col1, col2 = st.columns([4, 1])
+        # Message input - ChatGPT style
+        message_container = st.container()
+        with message_container:
+            col1, col2 = st.columns([10, 1])
             
             with col1:
-                user_message = st.text_input("Type your message…", placeholder="Type your message…", label_visibility="collapsed")
+                # Auto-expanding text area like ChatGPT
+                user_message = st.text_area(
+                    "", 
+                    placeholder="Message Nexia...",
+                    height=50,
+                    max_chars=2000,
+                    key="message_input",
+                    label_visibility="collapsed"
+                )
             
             with col2:
-                send_button = st.form_submit_button("Send ➤", use_container_width=True)
+                st.write("")
+                st.write("")
+                send_button = st.button("➤", key="send_btn", help="Send message")
             
-            if send_button and user_message.strip():
-                # Create new chat if none exists
-                if not active_chat:
-                    active_chat = create_new_chat()
-                
-                # Add user message
-                user_msg = {"role": "user", "content": user_message}
-                active_chat["messages"].append(user_msg)
-                
-                # Generate title from first message
-                if len(active_chat["messages"]) == 1:
-                    active_chat["title"] = generate_chat_title_from_conversation(active_chat["messages"])
-                
-                # Get AI response
-                with st.spinner("Nexia is typing..."):
-                    ai_response = send_message_to_groq(active_chat["messages"][:-1], user_message)
-                
-                # Add AI message
-                ai_msg = {"role": "assistant", "content": ai_response}
-                active_chat["messages"].append(ai_msg)
-                
-                # Generate smart title after 2-3 exchanges
-                if len(active_chat["messages"]) >= 4:
-                    with st.spinner("Generating title..."):
+            # Send on Enter (Shift+Enter for new line)
+            if user_message and (send_button or (user_message.endswith('\n') and not user_message.endswith('\n\n'))):
+                if user_message.strip():
+                    # Create new chat if none exists
+                    if not active_chat:
+                        active_chat = create_new_chat()
+                    
+                    # Add user message
+                    user_msg = {"role": "user", "content": user_message.strip()}
+                    active_chat["messages"].append(user_msg)
+                    
+                    # Generate title from first message
+                    if len(active_chat["messages"]) == 1:
+                        active_chat["title"] = generate_chat_title_from_conversation(active_chat["messages"])
+                    
+                    # Get AI response with streaming effect
+                    with st.spinner("Nexia is thinking..."):
+                        ai_response = send_message_to_groq(active_chat["messages"][:-1], user_message.strip())
+                    
+                    # Add AI message
+                    ai_msg = {"role": "assistant", "content": ai_response}
+                    active_chat["messages"].append(ai_msg)
+                    
+                    # Generate smart title after exchanges
+                    if len(active_chat["messages"]) >= 4:
                         smart_title = generate_chat_title_from_conversation(active_chat["messages"])
                         active_chat["title"] = smart_title
-                
-                # Update chat in session state
-                for i, chat in enumerate(st.session_state.chats):
-                    if chat["id"] == active_chat["id"]:
-                        st.session_state.chats[i] = active_chat
-                        break
-                
-                # Save to user's persistent storage
-                save_user_chats(st.session_state.user_email, st.session_state.chats)
-                
-                st.rerun()
+                    
+                    # Update chat in session state
+                    for i, chat in enumerate(st.session_state.chats):
+                        if chat["id"] == active_chat["id"]:
+                            st.session_state.chats[i] = active_chat
+                            break
+                    
+                    # Save to user's persistent storage
+                    save_user_chats(st.session_state.user_email, st.session_state.chats)
+                    
+                    # Clear input and rerun
+                    st.session_state.message_input = ""
+                    st.rerun()
 
 if __name__ == "__main__":
     main()
