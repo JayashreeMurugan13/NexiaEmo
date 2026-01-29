@@ -461,41 +461,93 @@ def send_message_to_groq(messages, user_message):
 
 def generate_chat_title_from_conversation(messages):
     try:
-        # Simple title generation based on keywords to avoid API calls
         if not messages:
             return "Chat with Nexia"
         
-        # Get first user message for title generation
-        first_msg = ""
+        # Analyze entire conversation for better context
+        all_text = ""
+        user_messages = []
+        
         for msg in messages:
             if msg['role'] == 'user':
-                first_msg = msg['content'].lower()
-                break
+                user_messages.append(msg['content'].lower())
+                all_text += msg['content'].lower() + " "
         
-        # Simple keyword-based title generation
-        if any(word in first_msg for word in ['work', 'job', 'office', 'colleague']):
-            return "Work Chat"
-        elif any(word in first_msg for word in ['study', 'exam', 'college', 'school']):
-            return "Study Help"
-        elif any(word in first_msg for word in ['sad', 'tired', 'stressed', 'upset']):
-            return "Support Chat"
-        elif any(word in first_msg for word in ['happy', 'excited', 'great', 'awesome']):
-            return "Good Vibes"
-        elif any(word in first_msg for word in ['love', 'relationship', 'dating']):
-            return "Love Talk"
-        elif any(word in first_msg for word in ['family', 'mom', 'dad', 'sister', 'brother']):
-            return "Family Chat"
-        elif any(word in first_msg for word in ['project', 'idea', 'plan']):
-            return "Project Ideas"
-        else:
-            # Use first few words
-            words = first_msg.split()[:2]
-            if len(words) >= 2:
-                return f"{words[0].title()} {words[1].title()}"
-            elif len(words) == 1:
-                return f"{words[0].title()} Chat"
+        if not user_messages:
+            return "Chat with Nexia"
+        
+        # Enhanced keyword analysis with priority scoring
+        categories = {
+            'work': {'keywords': ['work', 'job', 'office', 'colleague', 'boss', 'meeting', 'project', 'deadline', 'career', 'interview'], 'titles': ['Work Chat', 'Career Talk', 'Office Life', 'Job Discussion']},
+            'study': {'keywords': ['study', 'exam', 'college', 'school', 'class', 'homework', 'assignment', 'test', 'university', 'course'], 'titles': ['Study Help', 'Exam Prep', 'School Chat', 'Learning']},
+            'emotions': {
+                'sad': {'keywords': ['sad', 'tired', 'stressed', 'upset', 'depressed', 'crying', 'hurt', 'broken', 'aiyo', 'romba tired'], 'titles': ['Support Chat', 'Feeling Down', 'Need Support', 'Tough Times']},
+                'happy': {'keywords': ['happy', 'excited', 'great', 'awesome', 'amazing', 'wonderful', 'super', 'semma', 'mass'], 'titles': ['Good Vibes', 'Happy Chat', 'Celebration', 'Great News']},
+                'angry': {'keywords': ['angry', 'mad', 'frustrated', 'annoyed', 'pissed'], 'titles': ['Venting', 'Frustrated', 'Need to Talk', 'Angry Moment']}
+            },
+            'relationships': {'keywords': ['love', 'relationship', 'dating', 'boyfriend', 'girlfriend', 'crush', 'marriage', 'breakup'], 'titles': ['Love Talk', 'Relationship', 'Dating Chat', 'Heart Matters']},
+            'family': {'keywords': ['family', 'mom', 'dad', 'sister', 'brother', 'parents', 'mother', 'father'], 'titles': ['Family Chat', 'Family Time', 'Home Talk', 'Family Matters']},
+            'health': {'keywords': ['health', 'sick', 'doctor', 'medicine', 'hospital', 'pain', 'headache'], 'titles': ['Health Talk', 'Feeling Sick', 'Health Check', 'Wellness']},
+            'food': {'keywords': ['food', 'eat', 'hungry', 'cook', 'recipe', 'restaurant', 'dinner', 'lunch'], 'titles': ['Food Talk', 'Cooking', 'Hungry', 'Recipe Chat']},
+            'travel': {'keywords': ['travel', 'trip', 'vacation', 'flight', 'hotel', 'visit'], 'titles': ['Travel Plans', 'Trip Talk', 'Vacation', 'Adventure']},
+            'tech': {'keywords': ['computer', 'phone', 'app', 'software', 'coding', 'programming', 'tech'], 'titles': ['Tech Talk', 'Coding', 'Tech Help', 'Digital']},
+            'entertainment': {'keywords': ['movie', 'music', 'game', 'book', 'tv', 'show', 'netflix'], 'titles': ['Entertainment', 'Movie Chat', 'Music Talk', 'Fun Time']}
+        }
+        
+        # Score each category
+        scores = {}
+        
+        # Check regular categories
+        for category, data in categories.items():
+            if category == 'emotions':
+                continue  # Handle emotions separately
+            
+            score = sum(1 for keyword in data['keywords'] if keyword in all_text)
+            if score > 0:
+                scores[category] = score
+        
+        # Handle emotions with higher priority
+        for emotion, data in categories['emotions'].items():
+            score = sum(1 for keyword in data['keywords'] if keyword in all_text)
+            if score > 0:
+                scores[f'emotion_{emotion}'] = score * 2  # Higher weight for emotions
+        
+        # Get the highest scoring category
+        if scores:
+            top_category = max(scores.keys(), key=lambda k: scores[k])
+            
+            if top_category.startswith('emotion_'):
+                emotion = top_category.split('_')[1]
+                titles = categories['emotions'][emotion]['titles']
             else:
-                return "Chat with Nexia"
+                titles = categories[top_category]['titles']
+            
+            # Return a random title from the category
+            import random
+            return random.choice(titles)
+        
+        # Fallback: Use first meaningful words
+        first_msg = user_messages[0]
+        
+        # Remove common words
+        stop_words = ['i', 'am', 'is', 'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'hi', 'hello', 'hey', 'how', 'what', 'when', 'where', 'why', 'can', 'could', 'would', 'should']
+        words = [word for word in first_msg.split() if word not in stop_words and len(word) > 2]
+        
+        if len(words) >= 2:
+            return f"{words[0].title()} {words[1].title()}"
+        elif len(words) == 1:
+            return f"{words[0].title()} Chat"
+        else:
+            # Time-based fallback
+            hour = datetime.now().hour
+            if 5 <= hour < 12:
+                return "Morning Chat"
+            elif 12 <= hour < 17:
+                return "Afternoon Chat"
+            elif 17 <= hour < 21:
+                return "Evening Chat"
+            else:
+                return "Night Chat"
             
     except:
         return "Chat with Nexia"
