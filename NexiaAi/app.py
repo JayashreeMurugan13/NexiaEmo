@@ -461,29 +461,27 @@ def register_user(email, password):
     return False, "Invalid email or password too short"
 
 def load_user_chats(email):
-    if email == "demo@nexia.ai":
-        return []
     if email in st.session_state.users_db:
         return st.session_state.users_db[email].get("chats", [])
     return []
 
 def save_user_chats(email, chats):
-    if email == "demo@nexia.ai":
-        return
     if email in st.session_state.users_db:
         st.session_state.users_db[email]["chats"] = chats
         save_users_db(st.session_state.users_db)
 
 def create_new_chat():
+    user_chats = load_user_chats(st.session_state.user_email)
     new_chat = {
-        "id": len(st.session_state.chats) + 1,
+        "id": len(user_chats) + 1,
         "title": "New Chat",
         "messages": [],
         "created_at": datetime.now().isoformat()
     }
-    st.session_state.chats.insert(0, new_chat)
+    user_chats.insert(0, new_chat)
+    st.session_state.chats = user_chats
     st.session_state.active_chat_id = new_chat["id"]
-    save_user_chats(st.session_state.user_email, st.session_state.chats)
+    save_user_chats(st.session_state.user_email, user_chats)
     return new_chat
 
 # Main app logic
