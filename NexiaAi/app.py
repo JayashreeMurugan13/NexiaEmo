@@ -52,6 +52,23 @@ def get_theme_css(dark_mode):
             .stSidebar {
                 background-color: #1e1e1e;
             }
+            .search-highlight {
+                border: 2px solid #ff6b6b !important;
+                box-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
+            }
+            .stTextInput > div > div > input {
+                height: 50px !important;
+                font-size: 16px !important;
+                padding: 12px !important;
+            }
+            .stTextArea > div > div > textarea {
+                min-height: 50px !important;
+                max-height: 200px !important;
+                resize: vertical !important;
+                font-size: 16px !important;
+                padding: 12px !important;
+                overflow-y: auto !important;
+            }
         </style>
         """
     else:
@@ -87,6 +104,23 @@ def get_theme_css(dark_mode):
                 color: #333;
                 border-bottom-left-radius: 0.25rem;
                 border: 1px solid #e0e0e0;
+            }
+            .search-highlight {
+                border: 2px solid #ff6b6b !important;
+                box-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
+            }
+            .stTextInput > div > div > input {
+                height: 50px !important;
+                font-size: 16px !important;
+                padding: 12px !important;
+            }
+            .stTextArea > div > div > textarea {
+                min-height: 50px !important;
+                max-height: 200px !important;
+                resize: vertical !important;
+                font-size: 16px !important;
+                padding: 12px !important;
+                overflow-y: auto !important;
             }
         </style>
         """
@@ -363,38 +397,87 @@ def generate_chat_title_from_conversation(messages):
         if not user_messages:
             return "Chat with Nexia"
         
+        # Enhanced categories with more keywords and better detection
         categories = {
-            'work': {'keywords': ['work', 'job', 'office', 'colleague', 'boss', 'meeting', 'project', 'deadline', 'career', 'interview'], 'titles': ['Work Chat', 'Career Talk', 'Office Life', 'Job Discussion']},
-            'study': {'keywords': ['study', 'exam', 'college', 'school', 'class', 'homework', 'assignment', 'test', 'university', 'course'], 'titles': ['Study Help', 'Exam Prep', 'School Chat', 'Learning']},
-            'emotions': {
-                'sad': {'keywords': ['sad', 'tired', 'stressed', 'upset', 'depressed', 'crying', 'hurt', 'broken', 'aiyo', 'romba tired'], 'titles': ['Support Chat', 'Feeling Down', 'Need Support', 'Tough Times']},
-                'happy': {'keywords': ['happy', 'excited', 'great', 'awesome', 'amazing', 'wonderful', 'super', 'semma', 'mass'], 'titles': ['Good Vibes', 'Happy Chat', 'Celebration', 'Great News']},
-                'angry': {'keywords': ['angry', 'mad', 'frustrated', 'annoyed', 'pissed'], 'titles': ['Venting', 'Frustrated', 'Need to Talk', 'Angry Moment']}
+            'work': {
+                'keywords': ['work', 'job', 'office', 'colleague', 'boss', 'meeting', 'project', 'deadline', 'career', 'interview', 'salary', 'promotion', 'company', 'business', 'professional', 'corporate', 'client', 'presentation', 'report', 'task'],
+                'titles': ['Work Discussion', 'Career Talk', 'Office Life', 'Job Chat', 'Professional Life', 'Work Matters']
             },
-            'relationships': {'keywords': ['love', 'relationship', 'dating', 'boyfriend', 'girlfriend', 'crush', 'marriage', 'breakup'], 'titles': ['Love Talk', 'Relationship', 'Dating Chat', 'Heart Matters']},
-            'family': {'keywords': ['family', 'mom', 'dad', 'sister', 'brother', 'parents', 'mother', 'father'], 'titles': ['Family Chat', 'Family Time', 'Home Talk', 'Family Matters']},
-            'health': {'keywords': ['health', 'sick', 'doctor', 'medicine', 'hospital', 'pain', 'headache'], 'titles': ['Health Talk', 'Feeling Sick', 'Health Check', 'Wellness']},
-            'food': {'keywords': ['food', 'eat', 'hungry', 'cook', 'recipe', 'restaurant', 'dinner', 'lunch'], 'titles': ['Food Talk', 'Cooking', 'Hungry', 'Recipe Chat']},
-            'travel': {'keywords': ['travel', 'trip', 'vacation', 'flight', 'hotel', 'visit'], 'titles': ['Travel Plans', 'Trip Talk', 'Vacation', 'Adventure']},
-            'tech': {'keywords': ['computer', 'phone', 'app', 'software', 'coding', 'programming', 'tech'], 'titles': ['Tech Talk', 'Coding', 'Tech Help', 'Digital']},
-            'entertainment': {'keywords': ['movie', 'music', 'game', 'book', 'tv', 'show', 'netflix'], 'titles': ['Entertainment', 'Movie Chat', 'Music Talk', 'Fun Time']}
+            'study': {
+                'keywords': ['study', 'exam', 'college', 'school', 'class', 'homework', 'assignment', 'test', 'university', 'course', 'grade', 'professor', 'teacher', 'student', 'education', 'learning', 'book', 'research', 'thesis', 'degree'],
+                'titles': ['Study Session', 'Academic Chat', 'School Talk', 'Learning Journey', 'Education Discussion', 'Study Help']
+            },
+            'emotions': {
+                'sad': {
+                    'keywords': ['sad', 'tired', 'stressed', 'upset', 'depressed', 'crying', 'hurt', 'broken', 'aiyo', 'romba tired', 'down', 'low', 'disappointed', 'worried', 'anxious', 'overwhelmed', 'exhausted', 'frustrated'],
+                    'titles': ['Support Chat', 'Feeling Down', 'Need Support', 'Tough Times', 'Emotional Support', 'Heart to Heart']
+                },
+                'happy': {
+                    'keywords': ['happy', 'excited', 'great', 'awesome', 'amazing', 'wonderful', 'super', 'semma', 'mass', 'fantastic', 'brilliant', 'excellent', 'perfect', 'love', 'joy', 'celebration', 'success'],
+                    'titles': ['Good Vibes', 'Happy Moments', 'Celebration Time', 'Great News', 'Positive Energy', 'Joy Chat']
+                },
+                'angry': {
+                    'keywords': ['angry', 'mad', 'frustrated', 'annoyed', 'pissed', 'furious', 'irritated', 'rage', 'hate', 'disgusted'],
+                    'titles': ['Venting Session', 'Frustrated Talk', 'Need to Vent', 'Anger Management', 'Letting Off Steam', 'Tough Moment']
+                }
+            },
+            'relationships': {
+                'keywords': ['love', 'relationship', 'dating', 'boyfriend', 'girlfriend', 'crush', 'marriage', 'breakup', 'partner', 'romantic', 'valentine', 'anniversary', 'wedding', 'proposal', 'heart', 'feelings'],
+                'titles': ['Love Talk', 'Relationship Chat', 'Dating Discussion', 'Heart Matters', 'Romance Talk', 'Love Life']
+            },
+            'family': {
+                'keywords': ['family', 'mom', 'dad', 'sister', 'brother', 'parents', 'mother', 'father', 'grandmother', 'grandfather', 'uncle', 'aunt', 'cousin', 'home', 'house'],
+                'titles': ['Family Chat', 'Family Time', 'Home Talk', 'Family Matters', 'Family Life', 'Home Sweet Home']
+            },
+            'health': {
+                'keywords': ['health', 'sick', 'doctor', 'medicine', 'hospital', 'pain', 'headache', 'fever', 'cold', 'flu', 'treatment', 'therapy', 'wellness', 'fitness', 'exercise', 'diet'],
+                'titles': ['Health Talk', 'Wellness Chat', 'Health Check', 'Medical Discussion', 'Fitness Journey', 'Health Matters']
+            },
+            'food': {
+                'keywords': ['food', 'eat', 'hungry', 'cook', 'recipe', 'restaurant', 'dinner', 'lunch', 'breakfast', 'meal', 'delicious', 'taste', 'cuisine', 'chef', 'kitchen'],
+                'titles': ['Food Talk', 'Cooking Chat', 'Foodie Discussion', 'Recipe Share', 'Culinary Chat', 'Meal Time']
+            },
+            'travel': {
+                'keywords': ['travel', 'trip', 'vacation', 'flight', 'hotel', 'visit', 'journey', 'adventure', 'explore', 'destination', 'tourist', 'holiday', 'sightseeing'],
+                'titles': ['Travel Plans', 'Adventure Talk', 'Vacation Chat', 'Journey Discussion', 'Travel Stories', 'Wanderlust']
+            },
+            'tech': {
+                'keywords': ['computer', 'phone', 'app', 'software', 'coding', 'programming', 'tech', 'internet', 'website', 'digital', 'ai', 'robot', 'technology', 'gadget'],
+                'titles': ['Tech Talk', 'Digital Chat', 'Tech Help', 'Coding Discussion', 'Gadget Talk', 'Tech World']
+            },
+            'entertainment': {
+                'keywords': ['movie', 'music', 'game', 'book', 'tv', 'show', 'netflix', 'youtube', 'video', 'song', 'artist', 'actor', 'series', 'film', 'concert'],
+                'titles': ['Entertainment Chat', 'Movie Talk', 'Music Discussion', 'Fun Time', 'Media Chat', 'Pop Culture']
+            },
+            'weather': {
+                'keywords': ['weather', 'rain', 'sunny', 'hot', 'cold', 'snow', 'storm', 'climate', 'temperature', 'cloudy', 'wind'],
+                'titles': ['Weather Chat', 'Climate Talk', 'Weather Update', 'Seasonal Chat']
+            },
+            'shopping': {
+                'keywords': ['shopping', 'buy', 'purchase', 'store', 'mall', 'online', 'order', 'delivery', 'price', 'sale', 'discount'],
+                'titles': ['Shopping Talk', 'Purchase Discussion', 'Shopping Spree', 'Deal Hunt']
+            }
         }
         
+        # Calculate scores with weighted importance
         scores = {}
         
+        # Check regular categories
         for category, data in categories.items():
             if category == 'emotions':
                 continue
             
-            score = sum(1 for keyword in data['keywords'] if keyword in all_text)
+            score = sum(2 if keyword in all_text else 0 for keyword in data['keywords'])
             if score > 0:
                 scores[category] = score
         
+        # Check emotional categories with higher weight
         for emotion, data in categories['emotions'].items():
-            score = sum(1 for keyword in data['keywords'] if keyword in all_text)
+            score = sum(3 if keyword in all_text else 0 for keyword in data['keywords'])
             if score > 0:
-                scores[f'emotion_{emotion}'] = score * 2
+                scores[f'emotion_{emotion}'] = score
         
+        # If we found matching categories, use the highest scoring one
         if scores:
             top_category = max(scores.keys(), key=lambda k: scores[k])
             
@@ -407,15 +490,20 @@ def generate_chat_title_from_conversation(messages):
             import random
             return random.choice(titles)
         
+        # Fallback: Extract meaningful words from first message
         first_msg = user_messages[0]
-        stop_words = ['i', 'am', 'is', 'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'hi', 'hello', 'hey', 'how', 'what', 'when', 'where', 'why', 'can', 'could', 'would', 'should']
-        words = [word for word in first_msg.split() if word not in stop_words and len(word) > 2]
+        stop_words = {'i', 'am', 'is', 'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'hi', 'hello', 'hey', 'how', 'what', 'when', 'where', 'why', 'can', 'could', 'would', 'should', 'will', 'do', 'does', 'did', 'have', 'has', 'had', 'be', 'been', 'being'}
         
-        if len(words) >= 2:
-            return f"{words[0].title()} {words[1].title()}"
-        elif len(words) == 1:
-            return f"{words[0].title()} Chat"
+        # Clean and extract meaningful words
+        words = [word.strip('.,!?;:"()[]{}') for word in first_msg.split()]
+        meaningful_words = [word for word in words if word.lower() not in stop_words and len(word) > 2 and word.isalpha()]
+        
+        if len(meaningful_words) >= 2:
+            return f"{meaningful_words[0].title()} & {meaningful_words[1].title()}"
+        elif len(meaningful_words) == 1:
+            return f"{meaningful_words[0].title()} Chat"
         else:
+            # Time-based fallback
             hour = datetime.now().hour
             if 5 <= hour < 12:
                 return "Morning Chat"
@@ -426,7 +514,7 @@ def generate_chat_title_from_conversation(messages):
             else:
                 return "Night Chat"
             
-    except:
+    except Exception as e:
         return "Chat with Nexia"
 
 def check_email_exists(email):
@@ -483,6 +571,42 @@ def create_new_chat():
     st.session_state.active_chat_id = new_chat["id"]
     save_user_chats(st.session_state.user_email, user_chats)
     return new_chat
+
+def delete_chat(chat_id):
+    st.session_state.chats = [chat for chat in st.session_state.chats if chat["id"] != chat_id]
+    if st.session_state.active_chat_id == chat_id:
+        st.session_state.active_chat_id = st.session_state.chats[0]["id"] if st.session_state.chats else None
+    save_user_chats(st.session_state.user_email, st.session_state.chats)
+
+def clear_all_chats():
+    st.session_state.chats = []
+    st.session_state.active_chat_id = None
+    save_user_chats(st.session_state.user_email, [])
+
+def search_chats(query):
+    if not query:
+        return st.session_state.chats, {}
+    
+    query_lower = query.lower()
+    filtered_chats = []
+    search_highlights = {}
+    
+    for chat in st.session_state.chats:
+        matching_messages = []
+        
+        # Search in title
+        title_match = query_lower in chat['title'].lower()
+        
+        # Search in messages
+        for i, message in enumerate(chat['messages']):
+            if query_lower in message['content'].lower():
+                matching_messages.append(i)
+        
+        if title_match or matching_messages:
+            filtered_chats.append(chat)
+            search_highlights[chat['id']] = matching_messages
+    
+    return filtered_chats, search_highlights
 
 # Main app logic
 def main():
@@ -560,21 +684,48 @@ def main():
                 create_new_chat()
                 st.rerun()
             
+            # Search functionality
+            search_query = st.text_input("🔍 Search chats...", placeholder="Search in titles and messages", key="search_input")
+            
             st.markdown("---")
             
-            for chat in st.session_state.chats:
+            # Filter chats based on search
+            if search_query:
+                display_chats, search_highlights = search_chats(search_query)
+                # Auto-select first matching chat if not already selected
+                if display_chats and (not st.session_state.active_chat_id or st.session_state.active_chat_id not in [c['id'] for c in display_chats]):
+                    st.session_state.active_chat_id = display_chats[0]['id']
+            else:
+                display_chats, search_highlights = st.session_state.chats, {}
+            
+            if not display_chats and search_query:
+                st.info("No chats found matching your search.")
+            
+            for chat in display_chats:
                 is_active = chat["id"] == st.session_state.active_chat_id
                 
-                if st.button(
-                    f"💬 {chat['title']}", 
-                    key=f"chat_{chat['id']}", 
-                    use_container_width=True,
-                    type="primary" if is_active else "secondary"
-                ):
-                    st.session_state.active_chat_id = chat["id"]
-                    st.rerun()
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    if st.button(
+                        f"💬 {chat['title']}", 
+                        key=f"chat_{chat['id']}", 
+                        use_container_width=True,
+                        type="primary" if is_active else "secondary"
+                    ):
+                        st.session_state.active_chat_id = chat["id"]
+                        st.rerun()
+                
+                with col2:
+                    if st.button("🗑️", key=f"delete_{chat['id']}", help="Delete chat"):
+                        delete_chat(chat["id"])
+                        st.rerun()
             
             st.markdown("---")
+            
+            if st.session_state.chats:
+                if st.button("🗑️ Clear All Chats", use_container_width=True):
+                    clear_all_chats()
+                    st.rerun()
             
             if st.button("🌙 Dark Mode" if not st.session_state.dark_mode else "☀️ Light Mode"):
                 st.session_state.dark_mode = not st.session_state.dark_mode
@@ -593,28 +744,60 @@ def main():
             active_chat = next((chat for chat in st.session_state.chats if chat["id"] == st.session_state.active_chat_id), None)
         
         if active_chat and active_chat["messages"]:
-            for message in active_chat["messages"]:
+            # Check if we're in search mode and have highlights for this chat
+            search_query = st.session_state.get('search_input', '')
+            if search_query:
+                _, search_highlights = search_chats(search_query)
+                highlight_indices = search_highlights.get(active_chat['id'], [])
+            else:
+                highlight_indices = []
+            
+            for i, message in enumerate(active_chat["messages"]):
+                # Highlight matching messages
+                highlight_class = " search-highlight" if i in highlight_indices else ""
+                
                 if message["role"] == "user":
-                    st.markdown(f'<div class="chat-message user-message">{message["content"]}</div>', unsafe_allow_html=True)
+                    col1, col2 = st.columns([10, 1])
+                    with col1:
+                        content = message["content"]
+                        if search_query and i in highlight_indices:
+                            highlighted_content = content.replace(search_query, f'<mark style="background-color: yellow; color: black;">{search_query}</mark>')
+                            st.markdown(f'<div class="chat-message user-message{highlight_class}">{highlighted_content}</div>', unsafe_allow_html=True)
+                        else:
+                            st.markdown(f'<div class="chat-message user-message{highlight_class}">{content}</div>', unsafe_allow_html=True)
+                    with col2:
+                        with st.expander("📋", expanded=False):
+                            st.code(message["content"], language=None)
                 else:
-                    st.markdown(f'<div class="chat-message assistant-message">🤖 {message["content"]}</div>', unsafe_allow_html=True)
+                    col1, col2 = st.columns([10, 1])
+                    with col1:
+                        content = message["content"]
+                        if search_query and i in highlight_indices:
+                            highlighted_content = content.replace(search_query, f'<mark style="background-color: yellow; color: black;">{search_query}</mark>')
+                            st.markdown(f'<div class="chat-message assistant-message{highlight_class}">🤖 {highlighted_content}</div>', unsafe_allow_html=True)
+                        else:
+                            st.markdown(f'<div class="chat-message assistant-message{highlight_class}">🤖 {content}</div>', unsafe_allow_html=True)
+                    with col2:
+                        with st.expander("📋", expanded=False):
+                            st.code(message["content"], language=None)
+
         
-        # Message input with Enter key support
+
+
+
         with st.form("message_form", clear_on_submit=True):
             col1, col2 = st.columns([9, 1])
             
             with col1:
-                user_message = st.text_area(
+                user_message = st.text_input(
                     "Type your message…", 
-                    placeholder="Chat with Nexia", 
+                    placeholder="Chat with Nexia (Press Enter to send)", 
                     label_visibility="collapsed",
-                    height=50,
-                    max_chars=2000
+                    max_chars=2000,
+                    key="message_input"
                 )
             
             with col2:
-                st.write("")
-                st.write("")
                 send_button = st.form_submit_button("➤", use_container_width=True)
             
             if send_button and user_message.strip():
@@ -625,7 +808,12 @@ def main():
                 active_chat["messages"].append(user_msg)
                 
                 if len(active_chat["messages"]) == 1:
-                    active_chat["title"] = generate_chat_title_from_conversation(active_chat["messages"])
+                    # Use actual first message content as title
+                    first_msg = user_message.strip()
+                    if len(first_msg) > 40:
+                        active_chat["title"] = first_msg[:37] + "..."
+                    else:
+                        active_chat["title"] = first_msg
                 
                 with st.spinner("Nexia is typing..."):
                     ai_response = send_message_to_groq(active_chat["messages"][:-1], user_message.strip())
@@ -633,9 +821,17 @@ def main():
                 ai_msg = {"role": "assistant", "content": ai_response}
                 active_chat["messages"].append(ai_msg)
                 
-                if len(active_chat["messages"]) >= 4:
+                # Generate contextual title that evolves with conversation
+                if len(active_chat["messages"]) >= 2:
                     smart_title = generate_chat_title_from_conversation(active_chat["messages"])
-                    active_chat["title"] = smart_title
+                    if smart_title and smart_title != "Chat with Nexia" and len(smart_title) > 3:
+                        active_chat["title"] = smart_title
+                
+                # Update title again after more conversation for better accuracy
+                if len(active_chat["messages"]) >= 6:
+                    updated_title = generate_chat_title_from_conversation(active_chat["messages"])
+                    if updated_title and updated_title != active_chat["title"] and len(updated_title) > 3:
+                        active_chat["title"] = updated_title
                 
                 for i, chat in enumerate(st.session_state.chats):
                     if chat["id"] == active_chat["id"]:
